@@ -1,5 +1,6 @@
 import threading
 import time
+from dataclasses import dataclass, field
 from pathlib import Path
 from sqlite3 import Connection
 
@@ -12,6 +13,7 @@ from .clustering import cluster_by_hamming
 from .schemas import (
     ClusterOut,
     ClustersResponse,
+    DecisionsRequest,
     PhotoOut,
     ScanRequest,
     ScanResponse,
@@ -20,7 +22,16 @@ from .schemas import (
 
 app = FastAPI(title="Siftr")
 
-state: dict[str, Path | None] = {"folder": None}
+
+@dataclass
+class Session:
+    """Single-user, in-memory review session (a deliberate scope choice)."""
+
+    folder: Path | None = None
+    rejected: set[int] = field(default_factory=set)
+
+
+session = Session()
 
 # Scans are serialized: sync endpoints run in a thread pool, so two
 # concurrent scan requests could otherwise write the same SQLite file.
@@ -73,7 +84,8 @@ def scan(req: ScanRequest) -> ScanResponse:
             clusters = _build_clusters(conn, req.threshold)
         finally:
             conn.close()
-    state["folder"] = folder
+    session.folder = folder
+    session.rejected = set()
     duration_ms = int((time.monotonic() - start) * 1000)
     return ScanResponse(
         photo_count=photo_count,
@@ -89,6 +101,14 @@ def clusters(threshold: int = Query(9, ge=0, le=64)) -> ClustersResponse:
         return _build_clusters(conn, threshold)
     finally:
         conn.close()
+
+
+@app.post("/api/decisions")
+def decisions(req: DecisionsRequest) -> dict[str, bool]:
+    if session.folder is None:
+        raise HTTPException(409, "No folder scanned yet")
+    session.rejected = set(req.reject)
+    return {"ok": True}
 
 
 @app.get("/api/thumbnail/{photo_id}")
@@ -118,10 +138,9 @@ def _validate_folder(raw: str) -> Path:
 
 
 def _open_current_cache() -> Connection:
-    folder = state["folder"]
-    if folder is None:
+    if session.folder is None:
         raise HTTPException(409, "No folder scanned yet")
-    return scanner.open_cache(folder)
+    return scanner.open_cache(session.folder)
 
 
 def _build_clusters(conn: Connection, threshold: int) -> ClustersResponse:

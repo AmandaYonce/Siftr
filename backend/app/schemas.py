@@ -12,6 +12,10 @@ class ScanRequest(CamelModel):
     recursive: bool = True
 
 
+class DecisionsRequest(CamelModel):
+    reject: list[int]
+
+
 class ScanResponse(CamelModel):
     photo_count: int
     cluster_count: int

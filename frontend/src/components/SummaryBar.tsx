@@ -7,6 +7,8 @@ interface SummaryBarProps {
   onThresholdChange: (value: number) => void
   onReset: () => void
   refreshing: boolean
+  mode: 'focus' | 'grid'
+  onModeChange: (mode: 'focus' | 'grid') => void
 }
 
 export function SummaryBar({
@@ -15,6 +17,8 @@ export function SummaryBar({
   onThresholdChange,
   onReset,
   refreshing,
+  mode,
+  onModeChange,
 }: SummaryBarProps) {
   return (
     <header className="summary-bar">
@@ -24,6 +28,20 @@ export function SummaryBar({
         <Stat value={summary.clusters} label="clusters" />
         <Stat value={summary.duplicates} label="likely duplicates" />
         <Stat value={formatBytes(summary.reclaimableBytes)} label="reclaimable" />
+      </div>
+      <div className="mode-toggle" role="group" aria-label="Review mode">
+        <button
+          className={mode === 'focus' ? 'mode-button mode-button--active' : 'mode-button'}
+          onClick={() => onModeChange('focus')}
+        >
+          Focus
+        </button>
+        <button
+          className={mode === 'grid' ? 'mode-button mode-button--active' : 'mode-button'}
+          onClick={() => onModeChange('grid')}
+        >
+          Grid
+        </button>
       </div>
       <label className={`threshold-control${refreshing ? ' threshold-control--busy' : ''}`}>
         Similarity

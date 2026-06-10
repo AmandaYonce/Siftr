@@ -35,3 +35,11 @@ export function scanFolder(
 export function fetchClusters(threshold: number): Promise<ClustersResponse> {
   return request(`/api/clusters?threshold=${threshold}`)
 }
+
+export function postDecisions(reject: number[]): Promise<{ ok: boolean }> {
+  return request('/api/decisions', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ reject }),
+  })
+}
