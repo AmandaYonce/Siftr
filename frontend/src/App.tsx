@@ -15,6 +15,7 @@ import { FocusMode } from './components/FocusMode'
 import { GridMode } from './components/GridMode'
 import { CullFooter } from './components/CullFooter'
 import { AppliedScreen } from './components/AppliedScreen'
+import { ShortcutOverlay } from './components/ShortcutOverlay'
 import './App.css'
 
 type Screen = 'start' | 'scanning' | 'results' | 'applied'
@@ -35,6 +36,7 @@ function App() {
   const [applying, setApplying] = useState(false)
   const [undoing, setUndoing] = useState(false)
   const [applyError, setApplyError] = useState<string | null>(null)
+  const [showShortcuts, setShowShortcuts] = useState(false)
   const clusterRequestSeq = useRef(0)
   const decisionsChain = useRef<Promise<unknown>>(Promise.resolve())
   const culling = useCulling()
@@ -201,10 +203,15 @@ function App() {
         onModeChange={setMode}
       />
       {mode === 'focus' ? (
-        <FocusMode clusters={data.clusters} culling={culling} />
+        <FocusMode
+          clusters={data.clusters}
+          culling={culling}
+          shortcutsDisabled={showShortcuts}
+        />
       ) : (
         <GridMode clusters={data.clusters} culling={culling} />
       )}
+      <ShortcutOverlay open={showShortcuts} onToggle={setShowShortcuts} />
       {applyError && (
         <p className="error-message error-message--floating" role="alert">
           {applyError}

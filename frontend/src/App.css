@@ -358,6 +358,70 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ---------- shortcut overlay ---------- */
+
+.shortcut-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.shortcut-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 1.5rem 2rem;
+  max-width: 420px;
+  width: calc(100% - 2rem);
+}
+
+.shortcut-panel h2 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+}
+
+.shortcut-panel dl {
+  margin: 0;
+}
+
+.shortcut-row {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  padding: 0.3rem 0;
+}
+
+.shortcut-row dt {
+  flex: 0 0 5.5rem;
+}
+
+.shortcut-row dd {
+  margin: 0;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+kbd {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--background);
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 0.78rem;
+}
+
+.shortcut-note {
+  margin: 1rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
 /* ---------- apply / applied ---------- */
 
 .apply-button {

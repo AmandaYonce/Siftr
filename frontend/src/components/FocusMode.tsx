@@ -6,9 +6,14 @@ import { formatBytes } from '../format'
 interface FocusModeProps {
   clusters: Cluster[]
   culling: Culling
+  shortcutsDisabled: boolean
 }
 
-export function FocusMode({ clusters, culling }: FocusModeProps) {
+export function FocusMode({
+  clusters,
+  culling,
+  shortcutsDisabled,
+}: FocusModeProps) {
   const { focusIndex, setFocusIndex } = culling
   const index = Math.max(Math.min(focusIndex, clusters.length - 1), 0)
   const cluster = clusters[index]
@@ -21,6 +26,7 @@ export function FocusMode({ clusters, culling }: FocusModeProps) {
       clusterIndex={index}
       clusterCount={clusters.length}
       culling={culling}
+      shortcutsDisabled={shortcutsDisabled}
       onAdvance={() =>
         setFocusIndex(Math.min(index + 1, clusters.length - 1))
       }
@@ -34,6 +40,7 @@ interface FocusClusterProps {
   clusterIndex: number
   clusterCount: number
   culling: Culling
+  shortcutsDisabled: boolean
   onAdvance: () => void
   onBack: () => void
 }
@@ -43,6 +50,7 @@ function FocusCluster({
   clusterIndex,
   clusterCount,
   culling,
+  shortcutsDisabled,
   onAdvance,
   onBack,
 }: FocusClusterProps) {
@@ -56,6 +64,7 @@ function FocusCluster({
   const selected = cluster.photos[selection]
 
   useEffect(() => {
+    if (shortcutsDisabled) return
     function onKey(event: KeyboardEvent) {
       if (event.metaKey || event.ctrlKey || event.altKey) return
       const target = event.target as HTMLElement | null
@@ -104,6 +113,7 @@ function FocusCluster({
   }, [
     cluster,
     selected,
+    shortcutsDisabled,
     toggleReject,
     keepOnly,
     acceptSuggestion,
@@ -120,8 +130,7 @@ function FocusCluster({
           ` · ${cluster.photos.length} similar photos`}
       </p>
       <p className="focus-hint">
-        ←/→ select · Space keep/reject · K keep only this · Enter accept
-        suggestion · N/P next/prev cluster · U undo
+        Press <kbd>?</kbd> for keyboard shortcuts
       </p>
       <FocusPreview
         photo={selected}
