@@ -24,6 +24,7 @@ export function FocusMode({ clusters, culling }: FocusModeProps) {
       onAdvance={() =>
         setFocusIndex(Math.min(index + 1, clusters.length - 1))
       }
+      onBack={() => setFocusIndex(Math.max(index - 1, 0))}
     />
   )
 }
@@ -34,6 +35,7 @@ interface FocusClusterProps {
   clusterCount: number
   culling: Culling
   onAdvance: () => void
+  onBack: () => void
 }
 
 function FocusCluster({
@@ -42,6 +44,7 @@ function FocusCluster({
   clusterCount,
   culling,
   onAdvance,
+  onBack,
 }: FocusClusterProps) {
   const { rejected, toggleReject, keepOnly, acceptSuggestion, undo } = culling
   const [selection, setSelection] = useState(() =>
@@ -54,6 +57,7 @@ function FocusCluster({
 
   useEffect(() => {
     function onKey(event: KeyboardEvent) {
+      if (event.metaKey || event.ctrlKey || event.altKey) return
       const target = event.target as HTMLElement | null
       if (
         target?.closest('input, button, select, textarea, [contenteditable]')
@@ -85,11 +89,28 @@ function FocusCluster({
         case 'U':
           undo()
           break
+        case 'n':
+        case 'N':
+          onAdvance()
+          break
+        case 'p':
+        case 'P':
+          onBack()
+          break
       }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [cluster, selected, toggleReject, keepOnly, acceptSuggestion, undo, onAdvance])
+  }, [
+    cluster,
+    selected,
+    toggleReject,
+    keepOnly,
+    acceptSuggestion,
+    undo,
+    onAdvance,
+    onBack,
+  ])
 
   return (
     <div className="focus-mode">
@@ -97,6 +118,10 @@ function FocusCluster({
         Cluster {clusterIndex + 1} of {clusterCount}
         {cluster.photos.length > 1 &&
           ` · ${cluster.photos.length} similar photos`}
+      </p>
+      <p className="focus-hint">
+        ←/→ select · Space keep/reject · K keep only this · Enter accept
+        suggestion · N/P next/prev cluster · U undo
       </p>
       <FocusPreview
         photo={selected}
