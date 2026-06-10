@@ -8,9 +8,10 @@ from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 
-from . import scanner
+from . import mover, scanner
 from .clustering import cluster_by_hamming
 from .schemas import (
+    ApplyResponse,
     ClusterOut,
     ClustersResponse,
     DecisionsRequest,
@@ -18,6 +19,7 @@ from .schemas import (
     ScanRequest,
     ScanResponse,
     Summary,
+    UndoResponse,
 )
 
 app = FastAPI(title="Siftr")
@@ -29,6 +31,7 @@ class Session:
 
     folder: Path | None = None
     rejected: set[int] = field(default_factory=set)
+    applied: list[mover.Move] = field(default_factory=list)
 
 
 session = Session()
@@ -86,6 +89,7 @@ def scan(req: ScanRequest) -> ScanResponse:
             conn.close()
     session.folder = folder
     session.rejected = set()
+    session.applied = []
     duration_ms = int((time.monotonic() - start) * 1000)
     return ScanResponse(
         photo_count=photo_count,
@@ -109,6 +113,61 @@ def decisions(req: DecisionsRequest) -> dict[str, bool]:
         raise HTTPException(409, "No folder scanned yet")
     session.rejected = set(req.reject)
     return {"ok": True}
+
+
+@app.post("/api/apply")
+def apply() -> ApplyResponse:
+    # The whole transaction holds the lock so a concurrent apply or scan
+    # can neither double-move files nor clobber the undo history.
+    with _scan_lock:
+        if session.folder is None:
+            raise HTTPException(409, "No folder scanned yet")
+        if session.applied:
+            raise HTTPException(
+                409, "An apply is already awaiting undo; undo or re-scan"
+            )
+        if not session.rejected:
+            raise HTTPException(422, "No photos are marked as rejected")
+
+        conn = scanner.open_cache(session.folder)
+        try:
+            ids = sorted(session.rejected)
+            placeholders = ",".join("?" * len(ids))
+            rows = conn.execute(
+                "SELECT id, path, size FROM photos"
+                f" WHERE id IN ({placeholders})",
+                ids,
+            ).fetchall()
+        finally:
+            conn.close()
+        if len(rows) != len(ids):
+            raise HTTPException(
+                409,
+                "Some rejected photos are no longer in the scan;"
+                " re-scan and review again",
+            )
+
+        photos = [(row["id"], Path(row["path"])) for row in rows]
+        sizes = {row["id"]: row["size"] for row in rows}
+        try:
+            moves = mover.apply_rejects(session.folder, photos)
+        except ValueError as exc:
+            raise HTTPException(400, str(exc))
+
+        session.applied = moves
+        session.rejected = set()
+    reclaimed = sum(sizes[move.photo_id] for move in moves)
+    return ApplyResponse(moved=len(moves), reclaimed_bytes=reclaimed)
+
+
+@app.post("/api/undo")
+def undo() -> UndoResponse:
+    with _scan_lock:
+        if not session.applied:
+            raise HTTPException(409, "Nothing to undo")
+        restored = mover.undo_moves(session.applied)
+        session.applied = []
+    return UndoResponse(restored=restored)
 
 
 @app.get("/api/thumbnail/{photo_id}")

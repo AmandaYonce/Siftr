@@ -1,4 +1,9 @@
-import type { ClustersResponse, ScanResponse } from './types'
+import type {
+  ApplyResponse,
+  ClustersResponse,
+  ScanResponse,
+  UndoResponse,
+} from './types'
 
 export class ApiError extends Error {}
 
@@ -42,4 +47,12 @@ export function postDecisions(reject: number[]): Promise<{ ok: boolean }> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ reject }),
   })
+}
+
+export function applyRejects(): Promise<ApplyResponse> {
+  return request('/api/apply', { method: 'POST' })
+}
+
+export function undoApply(): Promise<UndoResponse> {
+  return request('/api/undo', { method: 'POST' })
 }

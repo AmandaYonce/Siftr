@@ -16,6 +16,15 @@ class DecisionsRequest(CamelModel):
     reject: list[int]
 
 
+class ApplyResponse(CamelModel):
+    moved: int
+    reclaimed_bytes: int
+
+
+class UndoResponse(CamelModel):
+    restored: int
+
+
 class ScanResponse(CamelModel):
     photo_count: int
     cluster_count: int

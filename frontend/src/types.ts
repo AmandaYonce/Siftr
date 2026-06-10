@@ -32,3 +32,12 @@ export interface ClustersResponse {
   summary: Summary
   clusters: Cluster[]
 }
+
+export interface ApplyResponse {
+  moved: number
+  reclaimedBytes: number
+}
+
+export interface UndoResponse {
+  restored: number
+}

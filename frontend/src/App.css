@@ -348,6 +348,83 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* ---------- apply / applied ---------- */
+
+.apply-button {
+  padding: 0.5rem 1.1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.apply-button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.applied-screen {
+  max-width: 520px;
+  margin: 18vh auto 0;
+  padding: 0 1.5rem;
+  text-align: center;
+}
+
+.applied-screen h1 {
+  font-size: 1.5rem;
+}
+
+.applied-screen p {
+  color: var(--text-muted);
+}
+
+.applied-check {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  background: #2f9e44;
+  color: #fff;
+  font-size: 1.8rem;
+  line-height: 56px;
+}
+
+.applied-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.undo-button {
+  padding: 0.6rem 1.6rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+}
+
+.undo-button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.error-message--floating {
+  position: fixed;
+  bottom: 4rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 11;
+}
+
 /* ---------- cluster grid ---------- */
 
 .cluster-grid {

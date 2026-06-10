@@ -4,9 +4,16 @@ import { formatBytes } from '../format'
 interface CullFooterProps {
   clusters: Cluster[]
   rejected: ReadonlySet<number>
+  onApply: () => void
+  applying: boolean
 }
 
-export function CullFooter({ clusters, rejected }: CullFooterProps) {
+export function CullFooter({
+  clusters,
+  rejected,
+  onApply,
+  applying,
+}: CullFooterProps) {
   let keeping = 0
   let rejecting = 0
   let bytes = 0
@@ -28,6 +35,13 @@ export function CullFooter({ clusters, rejected }: CullFooterProps) {
         <strong>{rejecting.toLocaleString()}</strong>
         {rejecting > 0 && <> · ~{formatBytes(bytes)} to reclaim</>}
       </span>
+      <button
+        className="apply-button"
+        onClick={onApply}
+        disabled={rejecting === 0 || applying}
+      >
+        {applying ? 'Moving…' : `Apply (move ${rejecting} to _rejects/)`}
+      </button>
     </footer>
   )
 }

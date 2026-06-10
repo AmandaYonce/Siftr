@@ -1,15 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ApiError, fetchClusters, postDecisions, scanFolder } from './api'
-import type { ClustersResponse } from './types'
+import {
+  ApiError,
+  applyRejects,
+  fetchClusters,
+  postDecisions,
+  scanFolder,
+  undoApply,
+} from './api'
+import type { ApplyResponse, ClustersResponse } from './types'
 import { useCulling } from './hooks/useCulling'
 import { StartScreen } from './components/StartScreen'
 import { SummaryBar } from './components/SummaryBar'
 import { FocusMode } from './components/FocusMode'
 import { GridMode } from './components/GridMode'
 import { CullFooter } from './components/CullFooter'
+import { AppliedScreen } from './components/AppliedScreen'
 import './App.css'
 
-type Screen = 'start' | 'scanning' | 'results'
+type Screen = 'start' | 'scanning' | 'results' | 'applied'
 type Mode = 'focus' | 'grid'
 
 const DEFAULT_THRESHOLD = 9
@@ -22,6 +30,10 @@ function App() {
   const [data, setData] = useState<ClustersResponse | null>(null)
   const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD)
   const [refreshing, setRefreshing] = useState(false)
+  const [applied, setApplied] = useState<ApplyResponse | null>(null)
+  const [applying, setApplying] = useState(false)
+  const [undoing, setUndoing] = useState(false)
+  const [applyError, setApplyError] = useState<string | null>(null)
   const clusterRequestSeq = useRef(0)
   const decisionsChain = useRef<Promise<unknown>>(Promise.resolve())
   const culling = useCulling()
@@ -78,15 +90,67 @@ function App() {
     }
   }, [])
 
+  const handleApply = useCallback(async () => {
+    setApplying(true)
+    setApplyError(null)
+    try {
+      // The final sync goes through the same chain as the debounced
+      // ones, so an older in-flight update can never land after it.
+      decisionsChain.current = decisionsChain.current
+        .catch(() => {})
+        .then(() => postDecisions([...rejected]))
+      await decisionsChain.current
+      setApplied(await applyRejects())
+      setScreen('applied')
+    } catch (err) {
+      setApplyError(
+        err instanceof ApiError ? err.message : 'Apply failed.',
+      )
+    } finally {
+      setApplying(false)
+    }
+  }, [rejected])
+
+  const handleUndo = useCallback(async () => {
+    setUndoing(true)
+    setApplyError(null)
+    try {
+      await undoApply()
+      await postDecisions([...rejected])
+      setApplied(null)
+      setScreen('results')
+    } catch (err) {
+      setApplyError(
+        err instanceof ApiError ? err.message : 'Undo failed.',
+      )
+    } finally {
+      setUndoing(false)
+    }
+  }, [rejected])
+
   const handleReset = useCallback(() => {
     setScreen('start')
     setData(null)
     setError(null)
+    setApplied(null)
+    setApplyError(null)
     resetCulling()
   }, [resetCulling])
 
   if (screen === 'start') {
     return <StartScreen onScan={handleScan} error={error} />
+  }
+
+  if (screen === 'applied' && applied) {
+    return (
+      <AppliedScreen
+        result={applied}
+        onUndo={handleUndo}
+        undoing={undoing}
+        onStartOver={handleReset}
+        error={applyError}
+      />
+    )
   }
 
   if (screen === 'scanning' || data === null) {
@@ -120,7 +184,17 @@ function App() {
       ) : (
         <GridMode clusters={data.clusters} culling={culling} />
       )}
-      <CullFooter clusters={data.clusters} rejected={rejected} />
+      {applyError && (
+        <p className="error-message error-message--floating" role="alert">
+          {applyError}
+        </p>
+      )}
+      <CullFooter
+        clusters={data.clusters}
+        rejected={rejected}
+        onApply={handleApply}
+        applying={applying}
+      />
     </div>
   )
 }
