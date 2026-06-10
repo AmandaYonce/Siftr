@@ -80,6 +80,22 @@ def test_corrupted_file_drops_its_stale_cache_row(photo_folder: Path):
     conn.close()
 
 
+def test_heic_files_are_scanned(photo_folder: Path):
+    img = Image.new("RGB", (64, 64), color=(40, 160, 90))
+    img.save(photo_folder / "phone.heic", format="HEIF")
+
+    conn = scanner.open_cache(photo_folder)
+    assert scanner.scan_folder(photo_folder, conn) == 4
+
+    row = conn.execute(
+        "SELECT phash, thumb_path FROM photos WHERE path LIKE '%phone.heic'"
+    ).fetchone()
+    assert row is not None
+    assert len(row["phash"]) == 16
+    assert Path(row["thumb_path"]).exists()
+    conn.close()
+
+
 def test_rejects_and_cache_dirs_are_excluded(photo_folder: Path):
     rejects = photo_folder / "_rejects"
     rejects.mkdir()

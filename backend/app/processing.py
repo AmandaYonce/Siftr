@@ -6,6 +6,9 @@ import cv2
 import imagehash
 import numpy as np
 from PIL import Image, ImageOps
+from pillow_heif import register_heif_opener
+
+register_heif_opener()
 
 THUMBNAIL_EDGE = 320
 

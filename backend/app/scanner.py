@@ -8,7 +8,7 @@ from sqlite3 import Connection
 from .db import connect
 from .processing import ProcessedImage, process_image
 
-IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}
+IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".heic", ".heif"}
 EXCLUDED_DIRS = {"_rejects", ".siftr-cache"}
 MAX_IMAGES = 2000
 
