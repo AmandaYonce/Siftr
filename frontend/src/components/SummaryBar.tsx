@@ -5,6 +5,8 @@ interface SummaryBarProps {
   summary: Summary
   threshold: number
   onThresholdChange: (value: number) => void
+  preferFaces: boolean
+  onPreferFacesChange: (value: boolean) => void
   onReset: () => void
   refreshing: boolean
   mode: 'focus' | 'grid'
@@ -15,6 +17,8 @@ export function SummaryBar({
   summary,
   threshold,
   onThresholdChange,
+  preferFaces,
+  onPreferFacesChange,
   onReset,
   refreshing,
   mode,
@@ -53,6 +57,14 @@ export function SummaryBar({
           onChange={(e) => onThresholdChange(Number(e.target.value))}
         />
         <span className="threshold-value">{threshold}</span>
+      </label>
+      <label className="prefer-faces-toggle" title="Suggest the keeper with the sharpest camera-facing face instead of overall sharpness">
+        <input
+          type="checkbox"
+          checked={preferFaces}
+          onChange={(e) => onPreferFacesChange(e.target.checked)}
+        />
+        Prefer faces
       </label>
       <button className="link-button" onClick={onReset}>
         Scan another folder

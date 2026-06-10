@@ -40,6 +40,7 @@ class PhotoOut(CamelModel):
     height: int
     taken_at: str | None
     bytes: int
+    face_count: int
 
 
 class ClusterOut(CamelModel):

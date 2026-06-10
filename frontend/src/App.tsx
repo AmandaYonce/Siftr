@@ -29,6 +29,7 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   const [data, setData] = useState<ClustersResponse | null>(null)
   const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD)
+  const [preferFaces, setPreferFaces] = useState(false)
   const [refreshing, setRefreshing] = useState(false)
   const [applied, setApplied] = useState<ApplyResponse | null>(null)
   const [applying, setApplying] = useState(false)
@@ -58,7 +59,7 @@ function App() {
       setError(null)
       try {
         await scanFolder(folder, threshold, recursive)
-        setData(await fetchClusters(threshold))
+        setData(await fetchClusters(threshold, preferFaces))
         resetCulling()
         setMode('focus')
         setScreen('results')
@@ -71,24 +72,42 @@ function App() {
         setScreen('start')
       }
     },
-    [threshold, resetCulling],
+    [threshold, preferFaces, resetCulling],
   )
 
-  const handleThresholdChange = useCallback(async (value: number) => {
-    setThreshold(value)
-    setRefreshing(true)
-    // Rapid slider moves can resolve out of order; only the latest
-    // request is allowed to update the screen.
-    const seq = ++clusterRequestSeq.current
-    try {
-      const next = await fetchClusters(value)
-      if (seq === clusterRequestSeq.current) setData(next)
-    } catch {
-      // Keep showing the previous clustering if the refresh fails.
-    } finally {
-      if (seq === clusterRequestSeq.current) setRefreshing(false)
-    }
-  }, [])
+  const refreshClusters = useCallback(
+    async (nextThreshold: number, nextPreferFaces: boolean) => {
+      setRefreshing(true)
+      // Rapid control changes can resolve out of order; only the latest
+      // request is allowed to update the screen.
+      const seq = ++clusterRequestSeq.current
+      try {
+        const next = await fetchClusters(nextThreshold, nextPreferFaces)
+        if (seq === clusterRequestSeq.current) setData(next)
+      } catch {
+        // Keep showing the previous clustering if the refresh fails.
+      } finally {
+        if (seq === clusterRequestSeq.current) setRefreshing(false)
+      }
+    },
+    [],
+  )
+
+  const handleThresholdChange = useCallback(
+    (value: number) => {
+      setThreshold(value)
+      void refreshClusters(value, preferFaces)
+    },
+    [preferFaces, refreshClusters],
+  )
+
+  const handlePreferFacesChange = useCallback(
+    (value: boolean) => {
+      setPreferFaces(value)
+      void refreshClusters(threshold, value)
+    },
+    [threshold, refreshClusters],
+  )
 
   const handleApply = useCallback(async () => {
     setApplying(true)
@@ -174,6 +193,8 @@ function App() {
         summary={data.summary}
         threshold={threshold}
         onThresholdChange={handleThresholdChange}
+        preferFaces={preferFaces}
+        onPreferFacesChange={handlePreferFacesChange}
         onReset={handleReset}
         refreshing={refreshing}
         mode={mode}

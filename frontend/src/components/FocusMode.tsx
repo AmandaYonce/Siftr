@@ -179,6 +179,8 @@ function FocusPreview({
         <strong>{photo.filename}</strong> · sharpness{' '}
         {Math.round(photo.sharpness)} · {photo.width}×{photo.height} ·{' '}
         {formatBytes(photo.bytes)}
+        {photo.faceCount > 0 &&
+          ` · ${photo.faceCount} ${photo.faceCount === 1 ? 'face' : 'faces'}`}
       </figcaption>
     </figure>
   )

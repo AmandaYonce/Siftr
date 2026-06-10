@@ -13,6 +13,7 @@ export interface Photo {
   height: number
   takenAt: string | null
   bytes: number
+  faceCount: number
 }
 
 export interface Cluster {

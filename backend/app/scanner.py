@@ -88,13 +88,16 @@ def scan_folder(folder: Path, conn: Connection, recursive: bool = True) -> int:
             conn.execute(
                 """
                 INSERT INTO photos (path, mtime, size, width, height, taken_at,
-                                    phash, sharpness, thumb_path)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                    phash, sharpness, face_count,
+                                    face_sharpness, thumb_path)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(path) DO UPDATE SET
                     mtime = excluded.mtime, size = excluded.size,
                     width = excluded.width, height = excluded.height,
                     taken_at = excluded.taken_at, phash = excluded.phash,
                     sharpness = excluded.sharpness,
+                    face_count = excluded.face_count,
+                    face_sharpness = excluded.face_sharpness,
                     thumb_path = excluded.thumb_path
                 """,
                 (
@@ -106,6 +109,8 @@ def scan_folder(folder: Path, conn: Connection, recursive: bool = True) -> int:
                     info.taken_at,
                     info.phash,
                     info.sharpness,
+                    info.face_count,
+                    info.face_sharpness,
                     str(_thumb_path_for(thumbs_dir, path)),
                 ),
             )

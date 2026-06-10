@@ -84,6 +84,8 @@ function PhotoCard({
         <span className="photo-meta">
           sharpness {Math.round(photo.sharpness)} · {photo.width}×{photo.height} ·{' '}
           {formatBytes(photo.bytes)}
+          {photo.faceCount > 0 &&
+            ` · ${photo.faceCount} ${photo.faceCount === 1 ? 'face' : 'faces'}`}
         </span>
         {photo.takenAt && (
           <span className="photo-meta">{formatTakenAt(photo.takenAt)}</span>

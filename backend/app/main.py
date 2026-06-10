@@ -99,10 +99,13 @@ def scan(req: ScanRequest) -> ScanResponse:
 
 
 @app.get("/api/clusters")
-def clusters(threshold: int = Query(9, ge=0, le=64)) -> ClustersResponse:
+def clusters(
+    threshold: int = Query(9, ge=0, le=64),
+    prefer_faces: bool = Query(False, alias="preferFaces"),
+) -> ClustersResponse:
     conn = _open_current_cache()
     try:
-        return _build_clusters(conn, threshold)
+        return _build_clusters(conn, threshold, prefer_faces)
     finally:
         conn.close()
 
@@ -202,19 +205,30 @@ def _open_current_cache() -> Connection:
     return scanner.open_cache(session.folder)
 
 
-def _build_clusters(conn: Connection, threshold: int) -> ClustersResponse:
+def _build_clusters(
+    conn: Connection, threshold: int, prefer_faces: bool = False
+) -> ClustersResponse:
     rows = conn.execute("SELECT * FROM photos").fetchall()
     by_id = {row["id"]: row for row in rows}
     groups = cluster_by_hamming({r["id"]: r["phash"] for r in rows}, threshold)
 
-    # Multi-photo clusters first (they need review), each photo sharpest-first.
+    # Multi-photo clusters first (they need review), each photo best-first.
     groups.sort(key=lambda g: (-len(g), min(by_id[i]["path"] for i in g)))
+
+    def rank(photo_id: int) -> tuple[float, ...]:
+        row = by_id[photo_id]
+        if prefer_faces:
+            # Camera-facing shots first, sharpest face wins among them;
+            # faceless photos fall back to overall sharpness.
+            has_face = 1 if row["face_count"] > 0 else 0
+            return (-has_face, -row["face_sharpness"], -row["sharpness"])
+        return (-row["sharpness"],)
 
     cluster_models = []
     duplicates = 0
     reclaimable = 0
     for index, group in enumerate(groups, start=1):
-        photos = sorted(group, key=lambda i: -by_id[i]["sharpness"])
+        photos = sorted(group, key=rank)
         keeper_id = photos[0]
         if len(photos) > 1:
             duplicates += len(photos) - 1
@@ -246,4 +260,5 @@ def _photo_out(row) -> PhotoOut:
         height=row["height"],
         taken_at=row["taken_at"],
         bytes=row["size"],
+        face_count=row["face_count"],
     )
