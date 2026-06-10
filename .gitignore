@@ -1,0 +1,21 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# Node
+node_modules/
+dist/
+
+# Siftr runtime artifacts
+.siftr-cache/
+_rejects/
+
+# Local agent context, intentionally untracked
+CLAUDE.md
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

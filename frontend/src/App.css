@@ -1,0 +1,19 @@
+.app {
+  max-width: 640px;
+  margin: 4rem auto;
+  padding: 0 1rem;
+  text-align: center;
+}
+
+.api-status {
+  font-size: 0.875rem;
+  color: #888;
+}
+
+.api-status--connected {
+  color: #3a9d5d;
+}
+
+.api-status--offline {
+  color: #c0392b;
+}
