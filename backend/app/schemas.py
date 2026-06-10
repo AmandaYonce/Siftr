@@ -1,4 +1,4 @@
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 
@@ -8,7 +8,7 @@ class CamelModel(BaseModel):
 
 class ScanRequest(CamelModel):
     folder: str
-    threshold: int = 9
+    threshold: int = Field(default=9, ge=0, le=64)
     recursive: bool = True
 
 

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import { ApiError, fetchClusters, scanFolder } from './api'
 import type { ClustersResponse } from './types'
 import { StartScreen } from './components/StartScreen'
@@ -16,6 +16,7 @@ function App() {
   const [data, setData] = useState<ClustersResponse | null>(null)
   const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD)
   const [refreshing, setRefreshing] = useState(false)
+  const clusterRequestSeq = useRef(0)
 
   const handleScan = useCallback(
     async (folder: string, recursive: boolean) => {
@@ -36,12 +37,16 @@ function App() {
   const handleThresholdChange = useCallback(async (value: number) => {
     setThreshold(value)
     setRefreshing(true)
+    // Rapid slider moves can resolve out of order; only the latest
+    // request is allowed to update the screen.
+    const seq = ++clusterRequestSeq.current
     try {
-      setData(await fetchClusters(value))
+      const next = await fetchClusters(value)
+      if (seq === clusterRequestSeq.current) setData(next)
     } catch {
       // Keep showing the previous clustering if the refresh fails.
     } finally {
-      setRefreshing(false)
+      if (seq === clusterRequestSeq.current) setRefreshing(false)
     }
   }, [])
 

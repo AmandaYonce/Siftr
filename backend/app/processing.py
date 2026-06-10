@@ -51,7 +51,9 @@ def _sharpness(img: Image.Image) -> float:
 
 def _read_taken_at(img: Image.Image) -> str | None:
     exif = img.getexif()
-    raw = exif.get_ifd(_EXIF_IFD).get(_EXIF_DATETIME_ORIGINAL) or exif.get(_EXIF_DATETIME)
+    raw = exif.get_ifd(_EXIF_IFD).get(_EXIF_DATETIME_ORIGINAL)
+    if not raw:
+        raw = exif.get(_EXIF_DATETIME)
     if not raw:
         return None
     try:

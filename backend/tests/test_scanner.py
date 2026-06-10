@@ -20,7 +20,12 @@ def photo_folder(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
 
 def _save_gradient(path: Path, seed: int) -> None:
     img = Image.new("RGB", (64, 64))
-    img.putdata([(seed, (x * y) % 256, (x + y + seed) % 256) for x in range(64) for y in range(64)])
+    pixels = [
+        (seed, (x * y) % 256, (x + y + seed) % 256)
+        for x in range(64)
+        for y in range(64)
+    ]
+    img.putdata(pixels)
     img.save(path)
 
 
@@ -38,7 +43,9 @@ def test_scan_caches_results_and_skips_non_images(photo_folder: Path):
     conn.close()
 
 
-def test_rescan_uses_cache_without_reprocessing(photo_folder: Path, monkeypatch: pytest.MonkeyPatch):
+def test_rescan_uses_cache_without_reprocessing(
+    photo_folder: Path, monkeypatch: pytest.MonkeyPatch
+):
     conn = scanner.open_cache(photo_folder)
     scanner.scan_folder(photo_folder, conn)
 
@@ -55,6 +62,21 @@ def test_scan_prunes_deleted_files(photo_folder: Path):
     scanner.scan_folder(photo_folder, conn)
     (photo_folder / "c.jpg").unlink()
     assert scanner.scan_folder(photo_folder, conn) == 2
+    conn.close()
+
+
+def test_corrupted_file_drops_its_stale_cache_row(photo_folder: Path):
+    conn = scanner.open_cache(photo_folder)
+    scanner.scan_folder(photo_folder, conn)
+
+    corrupted = photo_folder / "c.jpg"
+    corrupted.write_bytes(b"not a real jpeg")
+
+    assert scanner.scan_folder(photo_folder, conn) == 2
+    row = conn.execute(
+        "SELECT 1 FROM photos WHERE path = ?", (str(corrupted),)
+    ).fetchone()
+    assert row is None
     conn.close()
 
 

@@ -2,7 +2,9 @@ def hamming_distance(a: str, b: str) -> int:
     return (int(a, 16) ^ int(b, 16)).bit_count()
 
 
-def cluster_by_hamming(hashes: dict[int, str], threshold: int) -> list[list[int]]:
+def cluster_by_hamming(
+    hashes: dict[int, str], threshold: int
+) -> list[list[int]]:
     """Group photo ids whose perceptual hashes are within `threshold` bits.
 
     Builds connected components with union-find over all pairs. All-pairs is
@@ -20,7 +22,7 @@ def cluster_by_hamming(hashes: dict[int, str], threshold: int) -> list[list[int]
         return x
 
     for idx, a in enumerate(ids):
-        for b in ids[idx + 1 :]:
+        for b in ids[idx + 1:]:
             if (values[a] ^ values[b]).bit_count() <= threshold:
                 parent[find(a)] = find(b)
 

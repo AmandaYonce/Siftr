@@ -1,8 +1,10 @@
+import threading
 import time
 from pathlib import Path
 from sqlite3 import Connection
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 
 from . import scanner
@@ -20,10 +22,30 @@ app = FastAPI(title="Siftr")
 
 state: dict[str, Path | None] = {"folder": None}
 
+# Scans are serialized: sync endpoints run in a thread pool, so two
+# concurrent scan requests could otherwise write the same SQLite file.
+_scan_lock = threading.Lock()
+
 
 @app.exception_handler(HTTPException)
-async def http_exception_handler(request: Request, exc: HTTPException) -> JSONResponse:
-    return JSONResponse(status_code=exc.status_code, content={"error": exc.detail})
+async def http_exception_handler(
+    request: Request, exc: HTTPException
+) -> JSONResponse:
+    return JSONResponse(
+        status_code=exc.status_code, content={"error": exc.detail}
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(
+    request: Request, exc: RequestValidationError
+) -> JSONResponse:
+    first = exc.errors()[0] if exc.errors() else {}
+    location = ".".join(str(part) for part in first.get("loc", []))
+    message = first.get("msg", "Invalid request")
+    return JSONResponse(
+        status_code=422, content={"error": f"{location}: {message}"}
+    )
 
 
 @app.get("/api/health")
@@ -35,17 +57,22 @@ def health() -> dict[str, str]:
 def scan(req: ScanRequest) -> ScanResponse:
     folder = _validate_folder(req.folder)
     start = time.monotonic()
-    conn = scanner.open_cache(folder)
-    try:
+    with _scan_lock:
+        conn = scanner.open_cache(folder)
         try:
-            photo_count = scanner.scan_folder(folder, conn, req.recursive)
-        except PermissionError:
-            raise HTTPException(403, f"Permission denied reading: {folder}")
-        if photo_count == 0:
-            raise HTTPException(422, f"No images found in: {folder}")
-        clusters = _build_clusters(conn, req.threshold)
-    finally:
-        conn.close()
+            try:
+                photo_count = scanner.scan_folder(
+                    folder, conn, req.recursive
+                )
+            except PermissionError:
+                raise HTTPException(
+                    403, f"Permission denied reading: {folder}"
+                )
+            if photo_count == 0:
+                raise HTTPException(422, f"No images found in: {folder}")
+            clusters = _build_clusters(conn, req.threshold)
+        finally:
+            conn.close()
     state["folder"] = folder
     duration_ms = int((time.monotonic() - start) * 1000)
     return ScanResponse(
@@ -56,7 +83,7 @@ def scan(req: ScanRequest) -> ScanResponse:
 
 
 @app.get("/api/clusters")
-def clusters(threshold: int = 9) -> ClustersResponse:
+def clusters(threshold: int = Query(9, ge=0, le=64)) -> ClustersResponse:
     conn = _open_current_cache()
     try:
         return _build_clusters(conn, threshold)
@@ -73,9 +100,12 @@ def thumbnail(photo_id: int) -> FileResponse:
         ).fetchone()
     finally:
         conn.close()
-    if row is None or not Path(row["thumb_path"]).exists():
+    if row is None:
         raise HTTPException(404, f"No thumbnail for photo {photo_id}")
-    return FileResponse(row["thumb_path"], media_type="image/jpeg")
+    thumb = Path(row["thumb_path"]).resolve()
+    if not thumb.is_relative_to(scanner.CACHE_ROOT) or not thumb.exists():
+        raise HTTPException(404, f"No thumbnail for photo {photo_id}")
+    return FileResponse(thumb, media_type="image/jpeg")
 
 
 def _validate_folder(raw: str) -> Path:

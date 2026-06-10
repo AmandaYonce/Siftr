@@ -28,7 +28,11 @@ def test_threshold_boundary_is_inclusive():
 def test_transitive_chains_form_one_cluster():
     # a-b and b-c are within threshold but a-c is not; connected
     # components still group all three.
-    hashes = {1: "0000000000000000", 2: "0000000000000003", 3: "000000000000000f"}
+    hashes = {
+        1: "0000000000000000",
+        2: "0000000000000003",
+        3: "000000000000000f",
+    }
     assert hamming_distance(hashes[1], hashes[3]) > 2
     groups = cluster_by_hamming(hashes, threshold=2)
     assert len(groups) == 1
